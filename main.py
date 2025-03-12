@@ -8,6 +8,11 @@ from satis_raporu import SatisRaporu
 from borc_defteri import BorcDefteri
 from etiket_yazdir import EtiketYazdir
 
+
+#ticari amaçlı kullanmayınız 
+#bu kod sadece öğrenme amaçlıdır
+
+
 class MainMenu(QMainWindow):
     def __init__(self):
         super().__init__()
