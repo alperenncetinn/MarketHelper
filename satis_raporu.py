@@ -11,6 +11,8 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
 from PyQt6.QtCore import Qt, QDate
 from PyQt6.QtGui import QFont
 
+from styles import Styles
+
 class SatisRaporu(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -24,6 +26,9 @@ class SatisRaporu(QMainWindow):
         main_widget = QWidget()
         self.setCentralWidget(main_widget)
         main_layout = QVBoxLayout(main_widget)
+        
+        # Logo ekle
+        Styles.add_logo(main_layout, 80)
         
         # Tarih seçimi
         date_layout = QHBoxLayout()
@@ -43,7 +48,7 @@ class SatisRaporu(QMainWindow):
         self.bitis_date.setCalendarPopup(True)
         
         self.listele_button = QPushButton("Listele")
-        self.listele_button.setFont(QFont("Arial", 12))
+        self.listele_button.setObjectName("SuccessButton")
         self.listele_button.clicked.connect(self.load_sales)
         
         date_layout.addWidget(baslangic_label)
@@ -117,52 +122,8 @@ class SatisRaporu(QMainWindow):
         main_layout.addLayout(summary_layout)
         main_layout.addWidget(self.table)
         
-        # Stil
-        self.setStyleSheet("""
-            QMainWindow {
-                background-color: #f0f0f0;
-            }
-            QLabel {
-                color: #2c3e50;
-            }
-            QDateEdit {
-                padding: 8px;
-                border: 2px solid #3498db;
-                border-radius: 5px;
-                background-color: white;
-            }
-            QPushButton {
-                padding: 10px;
-                background-color: #3498db;
-                color: white;
-                border: none;
-                border-radius: 5px;
-                min-height: 40px;
-                min-width: 150px;
-            }
-            QPushButton:hover {
-                background-color: #2980b9;
-            }
-            QTableWidget {
-                background-color: white;
-                border: 1px solid #bdc3c7;
-                border-radius: 5px;
-                margin-top: 20px;
-            }
-            QHeaderView::section {
-                background-color: #3498db;
-                color: white;
-                padding: 8px;
-                border: none;
-            }
-            QGroupBox {
-                background-color: white;
-                border: 2px solid #3498db;
-                border-radius: 5px;
-                margin-top: 20px;
-                padding: 15px;
-            }
-        """)
+        # Stil - Global stylesheet kullanılıyor
+        pass
         
         # İlk yükleme
         self.load_sales()

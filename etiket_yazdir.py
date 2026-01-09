@@ -14,11 +14,13 @@ import sqlite3
 import os
 import tempfile
 
+from styles import Styles
+
 class EtiketYazdir(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Etiket Yazdır")
-        self.setGeometry(100, 100, 400, 250)
+        self.setGeometry(100, 100, 400, 350) 
         
         # Veritabanı bağlantısı
         self.connect_db()
@@ -27,6 +29,9 @@ class EtiketYazdir(QMainWindow):
         main_widget = QWidget()
         self.setCentralWidget(main_widget)
         layout = QVBoxLayout(main_widget)
+        
+        # Logo ekle
+        Styles.add_logo(layout, 100)
         
         # Barkod girişi
         barkod_layout = QHBoxLayout()
@@ -43,13 +48,14 @@ class EtiketYazdir(QMainWindow):
         button_layout = QHBoxLayout()
         
         # Yazdır butonu
+        # Yazdır butonu
         self.yazdir_button = QPushButton("Yazdır")
-        self.yazdir_button.setFont(QFont("Arial", 12))
+        self.yazdir_button.setObjectName("SuccessButton")
         self.yazdir_button.clicked.connect(self.print_label)
         
         # PDF Kaydet butonu
         self.pdf_button = QPushButton("PDF Kaydet")
-        self.pdf_button.setFont(QFont("Arial", 12))
+        self.pdf_button.setObjectName("NeutralButton")
         self.pdf_button.clicked.connect(self.save_as_pdf)
         
         button_layout.addWidget(self.yazdir_button)
@@ -59,32 +65,8 @@ class EtiketYazdir(QMainWindow):
         layout.addLayout(barkod_layout)
         layout.addLayout(button_layout)
         
-        # Stil
-        self.setStyleSheet("""
-            QMainWindow {
-                background-color: #f0f0f0;
-            }
-            QLabel {
-                color: #2c3e50;
-            }
-            QLineEdit {
-                padding: 8px;
-                border: 2px solid #3498db;
-                border-radius: 5px;
-                background-color: white;
-            }
-            QPushButton {
-                padding: 10px;
-                background-color: #3498db;
-                color: white;
-                border: none;
-                border-radius: 5px;
-                min-height: 40px;
-            }
-            QPushButton:hover {
-                background-color: #2980b9;
-            }
-        """)
+        # Stil - Global stylesheet kullanılıyor
+        pass
 
     def connect_db(self):
         """Veritabanı bağlantısını oluşturur"""

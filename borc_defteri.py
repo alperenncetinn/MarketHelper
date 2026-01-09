@@ -7,6 +7,8 @@ from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
 
+from styles import Styles
+
 class BorcDefteri(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -19,7 +21,14 @@ class BorcDefteri(QMainWindow):
         # Ana widget ve layout
         main_widget = QWidget()
         self.setCentralWidget(main_widget)
-        main_layout = QHBoxLayout(main_widget)
+        main_layout = QVBoxLayout(main_widget)
+        
+        # Logo ekle
+        Styles.add_logo(main_layout, 80)
+        
+        # İçerik layout (yatay)
+        content_layout = QHBoxLayout()
+        main_layout.addLayout(content_layout)
         
         # Sol taraf (borçlu listesi)
         left_layout = QVBoxLayout()
@@ -51,7 +60,7 @@ class BorcDefteri(QMainWindow):
         button_layout = QHBoxLayout()
         
         self.ekle_button = QPushButton("Müşteri Ekle")
-        self.ekle_button.setFont(QFont("Arial", 12))
+        self.ekle_button.setObjectName("SaveButton")
         self.ekle_button.clicked.connect(self.add_customer)
         
         button_layout.addWidget(self.ekle_button)
@@ -85,56 +94,19 @@ class BorcDefteri(QMainWindow):
         
         # Ödeme butonu
         self.odeme_button = QPushButton("Seçili Borcu Öde")
-        self.odeme_button.setFont(QFont("Arial", 12))
+        self.odeme_button.setObjectName("SuccessButton")
         self.odeme_button.clicked.connect(self.pay_debt)
         
         # Sağ layout'a ekle
         right_layout.addWidget(self.debt_table)
         right_layout.addWidget(self.odeme_button)
         
-        # Ana layout'a ekle
-        main_layout.addLayout(left_layout, 1)
-        main_layout.addLayout(right_layout, 2)
+        # İçerik layout'a ekle
+        content_layout.addLayout(left_layout, 1)
+        content_layout.addLayout(right_layout, 2)
         
-        # Stil
-        self.setStyleSheet("""
-            QMainWindow {
-                background-color: #f0f0f0;
-            }
-            QLabel {
-                color: #2c3e50;
-            }
-            QLineEdit {
-                padding: 8px;
-                border: 2px solid #3498db;
-                border-radius: 5px;
-                background-color: white;
-            }
-            QPushButton {
-                padding: 10px;
-                background-color: #3498db;
-                color: white;
-                border: none;
-                border-radius: 5px;
-                min-height: 40px;
-                min-width: 150px;
-            }
-            QPushButton:hover {
-                background-color: #2980b9;
-            }
-            QTableWidget {
-                background-color: white;
-                border: 1px solid #bdc3c7;
-                border-radius: 5px;
-                margin-top: 20px;
-            }
-            QHeaderView::section {
-                background-color: #3498db;
-                color: white;
-                padding: 8px;
-                border: none;
-            }
-        """)
+        # Stil - Global stylesheet kullanılıyor
+        pass
         
         # Müşterileri yükle
         self.load_customers()

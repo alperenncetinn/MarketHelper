@@ -9,6 +9,8 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont, QDoubleValidator
 
+from styles import Styles
+
 class UrunYonetimi(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -21,7 +23,14 @@ class UrunYonetimi(QMainWindow):
         # Ana widget ve layout
         main_widget = QWidget()
         self.setCentralWidget(main_widget)
-        main_layout = QHBoxLayout(main_widget)
+        main_layout = QVBoxLayout(main_widget)
+        
+        # Logo ekle
+        Styles.add_logo(main_layout, 80)
+        
+        # İçerik layout (yatay)
+        content_layout = QHBoxLayout()
+        main_layout.addLayout(content_layout)
         
         # Sol taraf (form ve tablo)
         left_layout = QVBoxLayout()
@@ -75,20 +84,20 @@ class UrunYonetimi(QMainWindow):
         button_layout = QHBoxLayout()
         
         self.kaydet_button = QPushButton("Kaydet")
-        self.kaydet_button.setFont(QFont("Arial", 12))
+        self.kaydet_button.setObjectName("SaveButton")
         self.kaydet_button.clicked.connect(self.save_product)
         
         self.temizle_button = QPushButton("Formu Temizle")
-        self.temizle_button.setFont(QFont("Arial", 12))
+        self.temizle_button.setObjectName("NeutralButton")
         self.temizle_button.clicked.connect(self.clear_form)
         
         # Veritabanı import/export butonları
         self.import_button = QPushButton("Veritabanı İçe Aktar")
-        self.import_button.setFont(QFont("Arial", 12))
+        self.import_button.setObjectName("NeutralButton")
         self.import_button.clicked.connect(self.import_database)
         
         self.export_button = QPushButton("Veritabanı Dışa Aktar")
-        self.export_button.setFont(QFont("Arial", 12))
+        self.export_button.setObjectName("NeutralButton")
         self.export_button.clicked.connect(self.export_database)
         
         button_layout.addWidget(self.kaydet_button)
@@ -182,7 +191,7 @@ class UrunYonetimi(QMainWindow):
         
         # Zam Uygula Butonu
         self.zam_button = QPushButton("Zam Uygula")
-        self.zam_button.setFont(QFont("Arial", 12))
+        self.zam_button.setObjectName("SuccessButton")
         self.zam_button.clicked.connect(self.apply_price_increase)
         right_layout.addWidget(self.zam_button)
         
@@ -193,49 +202,12 @@ class UrunYonetimi(QMainWindow):
         self.marka_bazli_radio.toggled.connect(self.update_marka_combo)
         self.tum_urunler_radio.toggled.connect(self.update_marka_combo)
         
-        # Layout'ları ana layout'a ekle
-        main_layout.addLayout(left_layout, 2)
-        main_layout.addLayout(right_layout, 1)
+        # Layout'ları içerik layout'a ekle
+        content_layout.addLayout(left_layout, 2)
+        content_layout.addLayout(right_layout, 1)
         
-        # Stil
-        self.setStyleSheet("""
-            QMainWindow {
-                background-color: #f0f0f0;
-            }
-            QLabel {
-                color: #2c3e50;
-            }
-            QLineEdit, QComboBox {
-                padding: 8px;
-                border: 2px solid #3498db;
-                border-radius: 5px;
-                background-color: white;
-            }
-            QPushButton {
-                padding: 10px;
-                background-color: #3498db;
-                color: white;
-                border: none;
-                border-radius: 5px;
-                min-height: 40px;
-                min-width: 150px;
-            }
-            QPushButton:hover {
-                background-color: #2980b9;
-            }
-            QTableWidget {
-                background-color: white;
-                border: 1px solid #bdc3c7;
-                border-radius: 5px;
-                margin-top: 20px;
-            }
-            QHeaderView::section {
-                background-color: #3498db;
-                color: white;
-                padding: 8px;
-                border: none;
-            }
-        """)
+        # Stil - Global stylesheet kullanılıyor
+        pass
         
         # Ürünleri yükle
         self.load_products()
