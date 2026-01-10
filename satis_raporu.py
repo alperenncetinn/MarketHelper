@@ -1,23 +1,29 @@
 import sys
 import sqlite3
-from datetime import datetime, timedelta
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.figure import Figure
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
-                            QHBoxLayout, QLabel, QComboBox, QTableWidget, 
-                            QTableWidgetItem, QHeaderView, QPushButton, QDateEdit, 
-                            QGroupBox, QMessageBox)
+                            QHBoxLayout, QLabel, QLineEdit, QPushButton, 
+                            QTableWidget, QTableWidgetItem, QHeaderView, QDateEdit,
+                            QTabWidget, QFrame, QGroupBox, QMessageBox)
 from PyQt6.QtCore import Qt, QDate
-from PyQt6.QtGui import QFont
+from PyQt6.QtGui import QFont, QColor
+from datetime import datetime, timedelta
+
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.figure import Figure
+import matplotlib.pyplot as plt
 
 from styles import Styles
+from market_ai import MarketAI
 
 class SatisRaporu(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Satış Raporu")
+        self.setWindowTitle("Satış Raporu ve AI Analizi")
         self.setGeometry(100, 100, 1200, 800)
+        
+        # AI Motorunu Başlat
+        self.ai = MarketAI()
+        self.ai.generate_dummy_data_if_empty() # Demo için veri yoksa oluştur
         
         # Veritabanı bağlantısı
         self.connect_db()
@@ -29,6 +35,32 @@ class SatisRaporu(QMainWindow):
         
         # Logo ekle
         Styles.add_logo(main_layout, 80)
+        
+        # TAB WIDGET (Raporlar ve AI Tahminleri)
+        self.tabs = QTabWidget()
+        self.tabs.setStyleSheet("""
+            QTabWidget::pane { border: 1px solid #334155; }
+            QTabBar::tab { background: #1e293b; color: #94a3b8; padding: 10px 20px; }
+            QTabBar::tab:selected { background: #3b82f6; color: white; font-weight: bold; }
+        """)
+        
+        # --- TAB 1: KLASİK RAPORLAR ---
+        self.tab_report = QWidget()
+        self.setup_report_tab()
+        self.tabs.addTab(self.tab_report, "Günlük Satışlar")
+        
+        # --- TAB 2: AI TAHMİN ---
+        self.tab_ai = QWidget()
+        self.setup_ai_tab()
+        self.tabs.addTab(self.tab_ai, "✨ Yapay Zeka Tahmini")
+        
+        main_layout.addWidget(self.tabs)
+        
+        # İlk listeleme
+        self.load_sales()
+
+    def setup_report_tab(self):
+        layout = QVBoxLayout(self.tab_report)
         
         # Tarih seçimi
         date_layout = QHBoxLayout()
@@ -58,6 +90,8 @@ class SatisRaporu(QMainWindow):
         date_layout.addWidget(self.listele_button)
         date_layout.addStretch()
         
+        layout.addLayout(date_layout)
+        
         # Özet bilgiler
         summary_layout = QHBoxLayout()
         
@@ -75,6 +109,7 @@ class SatisRaporu(QMainWindow):
             total_layout.addWidget(label)
         
         total_group.setLayout(total_layout)
+        summary_layout.addWidget(total_group)
         
         # Ödeme Türü Dağılımı
         payment_group = QGroupBox("Ödeme Türü Dağılımı")
@@ -88,27 +123,11 @@ class SatisRaporu(QMainWindow):
         for label in [self.cash_label, self.credit_label, self.debt_label]:
             label.setFont(QFont("Arial", 12))
             payment_layout.addWidget(label)
-        
+            
         payment_group.setLayout(payment_layout)
-        
-        # Günlük Özet
-        daily_group = QGroupBox("Günlük Özet")
-        daily_group.setFont(QFont("Arial", 12, QFont.Weight.Bold))
-        daily_layout = QVBoxLayout()
-        
-        self.daily_amount_label = QLabel("Günlük Ortalama Satış: 0.00 TL")
-        self.daily_count_label = QLabel("Günlük Ortalama İşlem: 0")
-        self.best_day_label = QLabel("En Yüksek Satış Günü: -")
-        
-        for label in [self.daily_amount_label, self.daily_count_label, self.best_day_label]:
-            label.setFont(QFont("Arial", 12))
-            daily_layout.addWidget(label)
-        
-        daily_group.setLayout(daily_layout)
-        
-        summary_layout.addWidget(total_group)
         summary_layout.addWidget(payment_group)
-        summary_layout.addWidget(daily_group)
+
+        layout.addLayout(summary_layout)
         
         # Satış tablosu
         self.table = QTableWidget()
@@ -116,37 +135,118 @@ class SatisRaporu(QMainWindow):
         self.table.setHorizontalHeaderLabels(["Tarih", "Ürün", "Adet", "Fiyat", "Toplam", "Ödeme Türü"])
         self.table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
         self.table.setFont(QFont("Arial", 12))
+        layout.addWidget(self.table)
+
+    def setup_ai_tab(self):
+        layout = QVBoxLayout(self.tab_ai)
         
-        # Layout'ları ana layout'a ekle
-        main_layout.addLayout(date_layout)
-        main_layout.addLayout(summary_layout)
-        main_layout.addWidget(self.table)
+        # Üst Bilgi
+        info_label = QLabel("Bu bölüm, geçmiş verileri analiz ederek gelecek günlerin satış tahminlerini yapar.")
+        info_label.setStyleSheet("color: #94a3b8; font-style: italic;")
+        layout.addWidget(info_label)
         
-        # Stil - Global stylesheet kullanılıyor
-        pass
+        # Tahmin Butonu
+        btn_predict = QPushButton("ANALİZ ET VE TAHMİN OLUŞTUR")
+        btn_predict.setObjectName("PrimaryButton")
+        btn_predict.clicked.connect(self.run_ai_prediction)
+        layout.addWidget(btn_predict)
         
-        # İlk yükleme
-        self.load_sales()
+        # Sonuçlar Alanı
+        results_layout = QHBoxLayout()
+        
+        # Sol: Liste
+        self.ai_table = QTableWidget()
+        self.ai_table.setColumnCount(2)
+        self.ai_table.setHorizontalHeaderLabels(["Tarih", "Tahmini Ciro (TL)"])
+        self.ai_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        results_layout.addWidget(self.ai_table, 1)
+        
+        # Sağ: Grafik
+        self.figure = Figure(figsize=(5, 4), dpi=100, facecolor=Styles.COLOR_SURFACE)
+        self.canvas = FigureCanvas(self.figure)
+        results_layout.addWidget(self.canvas, 2)
+        
+        layout.addLayout(results_layout)
+        
+        # Trend Göstergesi
+        self.trend_label = QLabel("Trend: Analiz bekleniyor...")
+        self.trend_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.trend_label.setStyleSheet("font-size: 24px; font-weight: bold; margin-top: 10px;")
+        layout.addWidget(self.trend_label)
+        
+        # Doğruluk Skoru
+        self.score_label = QLabel("Model Doğruluğu: -")
+        self.score_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.score_label.setStyleSheet("color: #94a3b8; font-size: 14px; margin-top: 5px;")
+        layout.addWidget(self.score_label)
+
+    def run_ai_prediction(self):
+        predictions, score = self.ai.predict_next_days(7)
+        
+        if not predictions:
+            self.ai_table.setRowCount(0)
+            self.trend_label.setText("Yetersiz Veri - Tahmin Yapılamadı")
+            self.score_label.setText("Model Doğruluğu: Hesaplanamadı")
+            return
+            
+        # Tabloyu Doldur
+        self.ai_table.setRowCount(len(predictions))
+        dates = []
+        values = []
+        
+        for i, pred in enumerate(predictions):
+            self.ai_table.setItem(i, 0, QTableWidgetItem(f"{pred['tarih']} ({pred['gun']})"))
+            self.ai_table.setItem(i, 1, QTableWidgetItem(f"{pred['tahmin']:.2f} TL"))
+            dates.append(pred['tarih'][:5]) # Sadece gün.ay
+            values.append(pred['tahmin'])
+            
+        # Trendi Göster
+        trend_status = self.ai.get_trend_analysis()
+        color = trend_status.split("(")[1].strip(")")
+        text = trend_status.split("(")[0]
+        self.trend_label.setText(f"TREND: {text}")
+        self.trend_label.setStyleSheet(f"font-size: 24px; font-weight: bold; margin-top: 10px; color: {color};")
+        
+        # Skoru Göster
+        self.score_label.setText(f"Model Doğruluğu (R²): {score:.4f} (1.00 üzerinden)")
+        if score > 0.7:
+             self.score_label.setStyleSheet("color: #2ecc71; font-size: 14px; margin-top: 5px; font-weight: bold;")
+        elif score > 0.4:
+             self.score_label.setStyleSheet("color: #f1c40f; font-size: 14px; margin-top: 5px;")
+        else:
+             self.score_label.setStyleSheet("color: #e74c3c; font-size: 14px; margin-top: 5px;")
+            
+        # Grafiği Çiz
+        self.figure.clear()
+        ax = self.figure.add_subplot(111)
+        ax.set_facecolor(Styles.COLOR_SURFACE) # Grafik zemini koyu
+        
+        # Çizgi
+        ax.plot(dates, values, marker='o', linestyle='-', color='#3b82f6', linewidth=3, label='Tahmin')
+        
+        # Alanı doldur
+        ax.fill_between(dates, values, alpha=0.3, color='#3b82f6')
+        
+        ax.set_title("Gelecek 7 Günün Satış Tahmini", color='white', fontsize=14)
+        ax.set_ylabel("Ciro (TL)", color='white')
+        
+        # Eksen renkleri
+        ax.tick_params(axis='x', colors='#94a3b8')
+        ax.tick_params(axis='y', colors='#94a3b8')
+        ax.spines['bottom'].set_color('#334155')
+        ax.spines['top'].set_color('none') 
+        ax.spines['right'].set_color('none')
+        ax.spines['left'].set_color('#334155')
+        
+        # Değerleri noktaların üzerine yaz
+        for i, v in enumerate(values):
+            ax.text(i, v + (max(values)*0.05), f"{int(v)}", color='white', ha='center')
+        
+        self.canvas.draw()
 
     def connect_db(self):
-        """Veritabanı bağlantısını oluşturur"""
         self.db = sqlite3.connect('market_urunler.db')
         self.cursor = self.db.cursor()
-        
-        # Satışlar tablosunu oluştur
-        self.cursor.execute("""
-            CREATE TABLE IF NOT EXISTS satislar (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                urun_id INTEGER,
-                adet INTEGER,
-                fiyat REAL,
-                toplam_fiyat REAL,
-                odeme_turu TEXT,
-                tarih TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (urun_id) REFERENCES urunler (id)
-            )
-        """)
-        self.db.commit()
 
     def load_sales(self):
         # Veritabanı bağlantısını yenile
@@ -219,28 +319,6 @@ class SatisRaporu(QMainWindow):
         self.cash_label.setText(f"Nakit: %{cash_percent:.1f} ({cash_sales:.2f} TL)")
         self.credit_label.setText(f"Kredi Kartı: %{credit_percent:.1f} ({credit_sales:.2f} TL)")
         self.debt_label.setText(f"Borç: %{debt_percent:.1f} ({debt_sales:.2f} TL)")
-        
-        # Günlük satış bilgileri
-        days = (bitis - baslangic).days
-        if days < 1:
-            days = 1
-        
-        daily_avg_amount = total_amount / days
-        daily_avg_count = total_count / days
-        
-        self.daily_amount_label.setText(f"Günlük Ortalama Satış: {daily_avg_amount:.2f} TL")
-        self.daily_count_label.setText(f"Günlük Ortalama İşlem: {daily_avg_count:.1f}")
-        
-        # En yüksek satış günü
-        daily_totals = {}
-        for sale in sales:
-            date = datetime.strptime(sale[0], "%Y-%m-%d %H:%M:%S").date()
-            daily_totals[date] = daily_totals.get(date, 0) + sale[4]
-        
-        if daily_totals:
-            best_day = max(daily_totals.items(), key=lambda x: x[1])
-            self.best_day_label.setText(
-                f"En Yüksek Satış Günü: {best_day[0].strftime('%d.%m.%Y')} ({best_day[1]:.2f} TL)")
 
     def closeEvent(self, event):
         self.db.close()
@@ -250,4 +328,4 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = SatisRaporu()
     window.show()
-    sys.exit(app.exec()) 
+    sys.exit(app.exec())

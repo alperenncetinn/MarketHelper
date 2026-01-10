@@ -5,15 +5,18 @@ from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                             QLabel, QLineEdit, QPushButton, QTableWidget, 
                             QTableWidgetItem, QMessageBox, QHeaderView)
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QFont
+from PyQt6.QtGui import QFont, QColor
 
 from styles import Styles
+from market_ai import MarketAI
 
 class BorcDefteri(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Borç Defteri")
-        self.setGeometry(100, 100, 1200, 800)
+        self.setWindowTitle("Borç Defteri (AI Destekli)")
+        self.setGeometry(100, 100, 1300, 800)
+        
+        self.ai = MarketAI() # AI Motoru
         
         # Veritabanı bağlantısı
         self.connect_db()
@@ -72,9 +75,10 @@ class BorcDefteri(QMainWindow):
         
         # Borçlu tablosu
         self.customer_table = QTableWidget()
-        self.customer_table.setColumnCount(4)
-        self.customer_table.setHorizontalHeaderLabels(["ID", "Müşteri Adı", "Telefon", "Toplam Borç"])
+        self.customer_table.setColumnCount(5) # +1 Güvenilirlik
+        self.customer_table.setHorizontalHeaderLabels(["ID", "Müşteri Adı", "Telefon", "Toplam Borç", "AI Analizi"])
         self.customer_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        self.customer_table.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)
         self.customer_table.setFont(QFont("Arial", 12))
         self.customer_table.itemClicked.connect(self.load_customer_debts)
         
@@ -102,8 +106,8 @@ class BorcDefteri(QMainWindow):
         right_layout.addWidget(self.odeme_button)
         
         # İçerik layout'a ekle
-        content_layout.addLayout(left_layout, 1)
-        content_layout.addLayout(right_layout, 2)
+        content_layout.addLayout(left_layout, 60)
+        content_layout.addLayout(right_layout, 40)
         
         # Stil - Global stylesheet kullanılıyor
         pass
@@ -191,11 +195,22 @@ class BorcDefteri(QMainWindow):
             
             self.customer_table.setRowCount(len(customers))
             for row, customer in enumerate(customers):
+                customer_id = customer[0]
+                
+                # AI Analizi
+                ai_sozcuk, ai_renk = self.ai.analyze_customer_reliability(customer_id)
+                
                 for col, value in enumerate(customer):
                     item = QTableWidgetItem(str(value))
                     if col == 3:  # Toplam borç kolonuysa
                         item = QTableWidgetItem(f"{float(value):.2f} TL")
                     self.customer_table.setItem(row, col, item)
+                
+                # AI Analiz Kolonu (4. index)
+                ai_item = QTableWidgetItem(ai_sozcuk)
+                ai_item.setForeground(QColor(ai_renk))
+                ai_item.setFont(QFont("Arial", 12, QFont.Weight.Bold))
+                self.customer_table.setItem(row, 4, ai_item)
                     
         except sqlite3.Error as e:
             QMessageBox.critical(self, "Hata", f"Veritabanı hatası: {str(e)}")
